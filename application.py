@@ -159,12 +159,12 @@ def book(book_id):
 @app.route("/search", methods=["GET"])
 def search():
     query = request.form.get("search")
-    books = db.execute("SELECT * FROM books WHERE year = :query ORDER BY title",
+    books = db.execute("SELECT * FROM books WHERE title = :query ORDER BY title",
         {"query" : query}).fetchall()
     db.close()
     if books is None:
         flash(u"No book matches your search!", "danger")
         return render_template("books.html", books=books)
     
-    # flash(u"Search results:", "success")
+    flash(u"Search results:", "success")
     return render_template("books.html", books=books)
