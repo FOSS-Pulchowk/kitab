@@ -1,0 +1,61 @@
+{% extends "layout.html" %}
+
+{% block title %}
+	Book - {{ book.title }}
+{% endblock %}
+
+{% block body %}
+<a href="{{ url_for('books') }}"><button class="btn p-0 m-2"><i class="material-icons">arrow_back</i></button></a>
+		<p class="display-4">{{ book.title }}</p>
+		<p class="lead">By {{ book.author }}</p>
+<div class="row">
+	<div class="col-lg-4">
+	    <ul class="list-group list-group-flush">
+	        <li class="list-group-item">Published Year : {{ book.year }} AD</li>
+	        <li class="list-group-item">ISBN number : {{ book.isbn }}</li>
+	    </ul>
+	</div>
+	<div class="col-lg-2 flex-column">
+		<div class="w-100 justify-content-between">
+			<label for="rating"><small>Rate this book</small></label>
+			<input type="range" class="custom-range" min="1" max="5" step="0.1" id="rating">
+			<p>Value: <span id="demo"></span></p>
+		</div>
+	</div>
+	<div class="col-lg-6">
+		<!-- reviews for the book -->
+		<p class="lead">User Reviews</p>
+		<div class="d-flex flex-column" style="overflow-y: scroll;height:200px;">
+			<ul class="list-group list-group-flush">
+				{% for user_review in reviews %}
+						<li class="list-group-item list-group-item-action">
+							{{ user_review.review }}
+						</li>
+				{% endfor %}
+			</ul>
+		</div>
+	</div>
+</div>
+
+<div class="row m-3">
+	<div class="col-lg-5">
+<form action="{{ url_for('review', user_id=session.id, book_id=book.id) }}" method="post">
+		<div class="form-group">
+			<label><p class="lead">Write a book review</p></label>
+			<textarea class="form-control" rows="4" name="review"></textarea>
+			<button class="btn btn-dark btn-sm m-2">Submit your review</button>
+		</div>
+	</form>
+	</div>
+</div>
+
+<script>
+var slider = document.getElementById("rating");
+var output = document.getElementById("demo");
+output.innerHTML = slider.value;
+
+slider.oninput = function() {
+  output.innerHTML = this.value;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Kitab
+{% endblock %}
+
+
+
+{% block body %}
+
+<div class="row">
+	<div class="col-lg-2"></div>
+	<div class="col-lg-8 text-center">
+		<div class="jumbotron jumbotron-fluid mt-5 p-3 text-body">
+			<h1 class="display-3">Kitab</h1>
+			<p class="lead">Reviews for all your favourite books.</p>
+		</div>
+	</div>
+	<div class="col-lg-2"></div>
+</div>
+	{% if session.logged_in %}
+		<div class="row">
+			<div class="col-lg-2"></div>
+			<div class="col-lg-8">
+				<form action="{{ url_for('search') }}" method="get">
+					<div class="input-group">
+						<input type="text" class="form-control" name="search" placeholder="Search book...">
+						<button class="btn btn-primary">Search</button>
+					</div>
+				</form>
+				<a href="{{ url_for('books') }}" class="btn btn-primary">Books</a>
+			</div>
+			<div class="col-lg-2"></div>
+		</div>
+
+	{% endif %}
+
+
+
+{% endblock %}

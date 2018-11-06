@@ -1,0 +1,9 @@
+a.home {
+	color: #ff00ff;	
+	font-family: 'Dekko', cursive;
+
+}
+
+a.home:hover {
+	text-decoration: none;
+}

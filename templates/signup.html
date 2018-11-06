@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+
+{% block title %}
+	Sign up
+{% endblock %}
+
+{% block body %}
+<div class="row">
+<div class="col-lg-4"></div>
+	<div class="col-lg-4 jumbotron mt-4">
+		{% with messages = get_flashed_messages(with_categories=true) %}
+			{% if messages %}
+				{% for category, message in messages %}
+					<div class="alert alert-{{ category }}">{{ message }} </div>
+				{% endfor %}
+			{% endif %}
+		{% endwith %}
+		<h2 class="text-body text-center pb-3">Register</h2>
+			<form action="{{ url_for('signup') }}" method="post">
+				<div class="form-group">
+					<input class="form-control" type="text" name="first_name" placeholder="First name">
+				</div>
+				<div class="form-group">
+					<input class="form-control" type="text" name="last_name" placeholder="Last name">
+				</div>
+
+				<div class="form-group">
+					<input class="form-control" type="email" name="email" placeholder="Email">
+				</div>
+				<div class="form-group">
+						<input class="form-control" type="text" name="username" placeholder="Username">
+				</div>
+				<div class="form-group">
+					<input class="form-control" type="password" name="password" placeholder="Password">
+				</div>
+
+				<div class="text-center"><button class="btn btn-dark form-control">Submit</button></div>
+
+			</form>
+
+<div class="col-lg-4"></div>
+
+</div>
+
+{% endblock %}
