@@ -1,9 +1,9 @@
 CREATE TABLE books (
     id SERIAL PRIMARY KEY,
-    isbn VARCHAR NOT NULL,
+    isbn VARCHAR UNIQUE NOT NULL,
     title VARCHAR NOT NULL,
     author VARCHAR NOT NULL,
-    year INTEGER NOT NULL
+    year SMALLINT NOT NULL
 );
 
 CREATE TABLE users (
@@ -12,7 +12,7 @@ CREATE TABLE users (
     last_name VARCHAR NOT NULL,
     username VARCHAR UNIQUE NOT NULL,
     password VARCHAR NOT NULL,
-    email VARCHAR NOT NULL
+    email VARCHAR UNIQUE NOT NULL
 );
 
 
@@ -20,6 +20,7 @@ CREATE TABLE reviews (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users,
     book_id INTEGER REFERENCES books,
+    rating SMALLINT NOT NULL CONSTRAINT Invalid_Rating CHECK (rating <=5 AND rating>=1),
     review VARCHAR
 );
 
