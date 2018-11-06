@@ -18,7 +18,7 @@
     <div class="list-group list-group-flush">
         {% for book in books %}
                 <a href="{{ url_for('book', book_id=book.id) }}" class="list-group-item list-group-item-action">
-                    {{ book.title }}
+                    <p class="font-weight-bold lead d-inline">{{ book.title }}</p> by <i>{{ book.author }}</i>
                 </a>
         {% endfor %}
     </div>

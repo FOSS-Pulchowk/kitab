@@ -14,8 +14,8 @@ def main():
     for isbn, title, author, year in reader:
         db.execute("INSERT INTO books (isbn, title, author, year) VALUES (:isbn, :title, :author, year)",
                    {"isbn": isbn, "title": title, "author": author})
+        db.commit()
         print(f"Added book {count}. {title} by {author}")
-    db.commit()
 
 
 if __name__ == "__main__":

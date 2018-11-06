@@ -107,8 +107,17 @@ def is_logged_in(f):
 
 @app.route("/dashboard/<int:user_id>")
 def dashboard(user_id):
-        user = db.execute("SELECT * FROM users WHERE id = :id",{"id":user_id}).fetchone()
-        return render_template("dashboard.html", user=user)
+    if 'logged_in' in session:
+        if session['id'] == user_id:
+            user = db.execute("SELECT * FROM users WHERE id = :id",{"id":user_id}).fetchone()
+            return render_template("dashboard.html", user=user)
+        else:
+            flash('Oops!! Looks like you are attempting something unauthorized!', 'danger')
+            return redirect(url_for('index'))
+
+    else:
+        flash('Unauthorized, Please login', 'danger')
+        return redirect(url_for('user_login'))
 
 @app.route("/logout")
 def logout():
@@ -149,11 +158,13 @@ def book(book_id):
 
 @app.route("/search", methods=["GET"])
 def search():
-    search = request.form.get("search")
-    books = db.execute("SELECT * FROM books WHERE title LIKE '%:search%'", {"search":search}).fetchall()
+    query = request.form.get("search")
+    books = db.execute("SELECT * FROM books WHERE year = :query ORDER BY title",
+        {"query" : query}).fetchall()
     db.close()
     if books is None:
         flash(u"No book matches your search!", "danger")
         return render_template("books.html", books=books)
-    flash(u"Search results:", "success")
+    
+    # flash(u"Search results:", "success")
     return render_template("books.html", books=books)
