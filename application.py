@@ -52,6 +52,11 @@ def signup():
         flash(u'Username already in use!', 'danger')
         return redirect(url_for('register'))
 
+    used_email = db.execute("SELECT * FROM users WHERE email = :email", {"email": email}).fetchone()
+    if used_email is not None:
+        flash(u'Email already in use!', 'danger')
+        return redirect(url_for('register'))       
+
     db.execute("INSERT INTO users(first_name, last_name, username, password, email) VALUES (:first_name, :last_name, :username, :password, :email)",
                {"first_name": first_name, "last_name": last_name, "username": username, "password": password, "email": email})
     db.commit()
@@ -92,9 +97,8 @@ def login():
 
     return redirect(url_for('user_login'))
 
+
 # Check if user logged in
-
-
 def is_logged_in(f):
     @wraps(f)
     def wrap(*args, **kwargs):
@@ -105,11 +109,12 @@ def is_logged_in(f):
             return redirect(url_for('user_login'))
     return wrap
 
+
 @app.route("/dashboard/<int:user_id>")
 def dashboard(user_id):
     if 'logged_in' in session:
         if session['id'] == user_id:
-            user = db.execute("SELECT * FROM users WHERE id = :id",{"id":user_id}).fetchone()
+            user = db.execute("SELECT * FROM users WHERE id = :id",{"id" : user_id}).fetchone()
             return render_template("dashboard.html", user=user)
         else:
             flash('Oops!! Looks like you are attempting something unauthorized!', 'danger')
@@ -119,17 +124,20 @@ def dashboard(user_id):
         flash('Unauthorized, Please login', 'danger')
         return redirect(url_for('user_login'))
 
+
 @app.route("/logout")
 def logout():
     session.clear()
     flash(u'You are now logged out.', 'success')
     return redirect(url_for('user_login'))
 
+
 @app.route("/review/<int:user_id>/<int:book_id>", methods=["POST"])
 def review(user_id,book_id):
     if request.method=="POST":
-        review = request.form.get("review")
-        db.execute("INSERT INTO reviews(review, book_id, user_id) VALUES (:review, :book_id, :user_id)",{"review":review,"book_id":book_id, "user_id":user_id})
+        review_ = request.form.get("review")
+        db.execute("INSERT INTO reviews(review, book_id, user_id) VALUES (:review, :book_id, :user_id)",
+                    {"review":review_,"book_id":book_id, "user_id":user_id})
         db.commit()
         db.close()
         return redirect(url_for('book', book_id=book_id))
@@ -137,34 +145,59 @@ def review(user_id,book_id):
 
 @app.route("/books")
 def books():
-        # Lists all the books
+    # Lists all the books
 
-    books = db.execute("SELECT * FROM books").fetchall()
+    booklist = db.execute("SELECT * FROM books").fetchall()
     db.close()
-    return render_template("books.html", books=books)
+    return render_template("books.html", books=booklist)
 
 
 @app.route("/books/<int:book_id>")
 def book(book_id):
         # Detail about book
-    book = db.execute("SELECT * FROM books WHERE id = :id", {"id": book_id}).fetchone()
+    book_ = db.execute("SELECT * FROM books WHERE id = :id", {"id": book_id}).fetchone()
     reviews = db.execute("SELECT * FROM reviews WHERE book_id=:id",{"id":book_id}).fetchall()
 
     db.close()
-    if book is None:
+    if book_ is None:
         return render_template("error.html", message="No such book.")
 
-    return render_template("book.html", book=book, reviews=reviews)
+    return render_template("book.html", book=book_, reviews=reviews)
 
-@app.route("/search", methods=["GET"])
+@app.route("/search", methods=["POST"])
 def search():
-    query = request.form.get("search")
-    books = db.execute("SELECT * FROM books WHERE title = :query ORDER BY title",
-        {"query" : query}).fetchall()
-    db.close()
-    if books is None:
-        flash(u"No book matches your search!", "danger")
-        return render_template("books.html", books=books)
+    if "logged_in" not in session:
+        flash('Unauthorized, Please login', 'danger')
+        return redirect(url_for('user_login'))
     
-    flash(u"Search results:", "success")
-    return render_template("books.html", books=books)
+    query = request.form.get("search")
+    option = request.form.get("search_option")
+
+    if option == 'year':
+        booklist = db.execute("SELECT * FROM books WHERE year = :query ORDER BY title",
+                                {"query" : query}).fetchall()
+    else:
+        booklist = db.execute("SELECT * FROM books WHERE UPPER(" + option + ") = :query ORDER BY title",
+                                {"query" : query.upper()}).fetchall()
+    
+
+    #for matching search queries of book title, author and isbn
+    if option !='year':
+        booklist = db.execute("SELECT * FROM books WHERE UPPER(" + option +") LIKE :query ORDER BY title",
+                                {"query" : "%" + query.upper() + "%"}).fetchall()
+        if len(booklist) == 0:
+            flash(u"No results found!", "danger")
+            return render_template("books.html")
+        else:
+            flash(u"No results match your search. Similar results:", "danger")
+            return render_template("books.html", books=booklist)
+
+    if len(booklist) == 0:
+        flash(u"No book matches your search!", "danger")
+        return render_template("books.html", books=booklist)
+    
+    flash(u"Search results for", "success")
+    return render_template("books.html", is_book = True, books = booklist, option = option)
+
+if __name__ == "__main__":
+    app.run(debug=True)

@@ -28,13 +28,21 @@ Kitab
 		<div class="row">
 			<div class="col-lg-2"></div>
 			<div class="col-lg-8">
-				<form action="{{ url_for('search') }}">
+				<form action="{{ url_for('search') }}" method="post">
 					<div class="input-group">
-						<input type="text" class="form-control" name="search" placeholder="Search book...">
-						<button class="btn btn-primary">Search</button>
+						  <div class="input-group-prepend">
+						    <select class="form-control" name="search_option">
+							  <option value="title">Book Title</option>
+							  <option value="author">Author</option>
+							  <option value="isbn">ISBN number</option>
+							  <option value="year">Year</option>
+
+							</select>
+						  </div>		
+						<input type="text" class="form-control" placeholder="Search book..." name="search">
+						<button type="submit" class="btn btn-primary">Search</button>
 					</div>
 				</form>
-				<a href="{{ url_for('books') }}" class="btn btn-primary">Books</a>
 			</div>
 			<div class="col-lg-2"></div>
 		</div>

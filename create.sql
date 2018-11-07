@@ -1,9 +1,9 @@
 CREATE TABLE books (
     id SERIAL PRIMARY KEY,
-    isbn VARCHAR NOT NULL,
+    isbn VARCHAR UNIQUE NOT NULL,
     title VARCHAR NOT NULL,
     author VARCHAR NOT NULL,
-    year INTEGER NOT NULL
+    year SMALLINT NOT NULL
 );
 
 CREATE TABLE users (
