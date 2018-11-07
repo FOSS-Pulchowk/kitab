@@ -1,8 +1,0 @@
-
-set the DATABASE_URL to your database url in the command line
-
-copy and paste the following in your command line
-
-set DATABASE_URL=postgres://pxxzyihasjzuii:e687475b54944c5767133f157930a35d6301b3e47d79ab6675dcc2d34df0859d@ec2-174-129-18-98.compute-1.amazonaws.com:5432/d245qbs9kvupbv
-set FLASK_APP=application.py
-set FLASK_DEBUG=1

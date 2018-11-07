@@ -9,17 +9,14 @@ from passlib.hash import sha256_crypt
 app = Flask(__name__)
 app.secret_key = os.urandom(28)
 
-# Check for environment variable
-if not os.getenv("DATABASE_URL"):
-    raise RuntimeError("DATABASE_URL is not set")
-
 # Configure session to use filesystem
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
 # Set up database
-engine = create_engine(os.getenv("DATABASE_URL"))
+engine = create_engine("postgres://pxxzyihasjzuii:e687475b54944c5767133f157930a35d6301b3e47d79ab6675dcc2d34df0859d@"
+                       "ec2-174-129-18-98.compute-1.amazonaws.com:5432/d245qbs9kvupbv")
 db = scoped_session(sessionmaker(bind=engine))
 
 
@@ -52,8 +49,10 @@ def signup():
         flash(u'Username already in use!', 'danger')
         return redirect(url_for('register'))
 
-    db.execute("INSERT INTO users(first_name, last_name, username, password, email) VALUES (:first_name, :last_name, :username, :password, :email)",
-               {"first_name": first_name, "last_name": last_name, "username": username, "password": password, "email": email})
+    db.execute(
+        "INSERT INTO users(first_name, last_name, username, password, email) "
+        "VALUES (:first_name, :last_name, :username, :password, :email)",
+        {"first_name": first_name, "last_name": last_name, "username": username, "password": password, "email": email})
     db.commit()
     db.close()
     flash(u'You have been successfully registered.', 'success')
@@ -92,9 +91,8 @@ def login():
 
     return redirect(url_for('user_login'))
 
+
 # Check if user logged in
-
-
 def is_logged_in(f):
     @wraps(f)
     def wrap(*args, **kwargs):
@@ -103,13 +101,15 @@ def is_logged_in(f):
         else:
             flash('Unauthorized, Please login', 'danger')
             return redirect(url_for('user_login'))
+
     return wrap
+
 
 @app.route("/dashboard/<int:user_id>")
 def dashboard(user_id):
     if 'logged_in' in session:
         if session['id'] == user_id:
-            user = db.execute("SELECT * FROM users WHERE id = :id",{"id":user_id}).fetchone()
+            user = db.execute("SELECT * FROM users WHERE id = :id", {"id": user_id}).fetchone()
             return render_template("dashboard.html", user=user)
         else:
             flash('Oops!! Looks like you are attempting something unauthorized!', 'danger')
@@ -119,17 +119,20 @@ def dashboard(user_id):
         flash('Unauthorized, Please login', 'danger')
         return redirect(url_for('user_login'))
 
+
 @app.route("/logout")
 def logout():
     session.clear()
     flash(u'You are now logged out.', 'success')
     return redirect(url_for('user_login'))
 
+
 @app.route("/review/<int:user_id>/<int:book_id>", methods=["POST"])
-def review(user_id,book_id):
-    if request.method=="POST":
-        review = request.form.get("review")
-        db.execute("INSERT INTO reviews(review, book_id, user_id) VALUES (:review, :book_id, :user_id)",{"review":review,"book_id":book_id, "user_id":user_id})
+def review(user_id, book_id):
+    if request.method == "POST":
+        review_ = request.form.get("review")
+        db.execute("INSERT INTO reviews(review, book_id, user_id) VALUES (:review, :book_id, :user_id)",
+                   {"review": review_, "book_id": book_id, "user_id": user_id})
         db.commit()
         db.close()
         return redirect(url_for('book', book_id=book_id))
@@ -137,34 +140,40 @@ def review(user_id,book_id):
 
 @app.route("/books")
 def books():
-        # Lists all the books
+    # Lists all the books
 
-    books = db.execute("SELECT * FROM books").fetchall()
+    booklist = db.execute("SELECT * FROM books").fetchall()
     db.close()
-    return render_template("books.html", books=books)
+    return render_template("books.html", books=booklist)
 
 
 @app.route("/books/<int:book_id>")
 def book(book_id):
-        # Detail about book
-    book = db.execute("SELECT * FROM books WHERE id = :id", {"id": book_id}).fetchone()
-    reviews = db.execute("SELECT * FROM reviews WHERE book_id=:id",{"id":book_id}).fetchall()
+    # Detail about book
+    book_ = db.execute("SELECT * FROM books WHERE id = :id", {"id": book_id}).fetchone()
+    reviews = db.execute("SELECT * FROM reviews WHERE book_id=:id", {"id": book_id}).fetchall()
 
     db.close()
     if book is None:
         return render_template("error.html", message="No such book.")
 
-    return render_template("book.html", book=book, reviews=reviews)
+    return render_template("book.html", book=book_, reviews=reviews)
 
-@app.route("/search", methods=["GET"])
+
+@app.route("/search", methods=["POST"])
 def search():
     query = request.form.get("search")
+    print(query)
     books = db.execute("SELECT * FROM books WHERE title = :query ORDER BY title",
-        {"query" : query}).fetchall()
+                       {"query": query}).fetchall()
     db.close()
     if books is None:
         flash(u"No book matches your search!", "danger")
         return render_template("books.html", books=books)
-    
+
     flash(u"Search results:", "success")
     return render_template("books.html", books=books)
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
