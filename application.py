@@ -1,4 +1,5 @@
 import os
+import requests
 
 from flask import Flask, session, render_template, request, flash, redirect, url_for
 from flask_session import Session
@@ -9,23 +10,22 @@ from passlib.hash import sha256_crypt
 app = Flask(__name__)
 app.secret_key = os.urandom(28)
 
-# Check for environment variable
-if not os.getenv("DATABASE_URL"):
-    raise RuntimeError("DATABASE_URL is not set")
-
 # Configure session to use filesystem
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
 # Set up database
-engine = create_engine(os.getenv("DATABASE_URL"))
+engine = create_engine("postgres://pxxzyihasjzuii:e687475b54944c5767133f157930a35d6301b3e47d79ab6675dcc2d34df0859d@ec2-174-129-18-98.compute-1.amazonaws.com:5432/d245qbs9kvupbv")
 db = scoped_session(sessionmaker(bind=engine))
 
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    try:
+        return render_template("index.html")
+    except TimeoutError:
+        return render_template("error.html", message="looks like something went wrong")
 
 
 @app.route("/register")
@@ -89,7 +89,7 @@ def login():
             session.clear()
             session['id'] = user.id
             session['logged_in'] = True
-            return render_template("index.html")
+            return render_template("index.html", username=user.username)
 
         flash(u'Wrong password!', 'danger')
         return redirect(url_for('user_login'))
@@ -132,72 +132,64 @@ def logout():
     return redirect(url_for('user_login'))
 
 
-@app.route("/review/<int:user_id>/<int:book_id>", methods=["POST"])
-def review(user_id,book_id):
-    if request.method=="POST":
-        review_ = request.form.get("review")
-        db.execute("INSERT INTO reviews(review, book_id, user_id) VALUES (:review, :book_id, :user_id)",
-                    {"review":review_,"book_id":book_id, "user_id":user_id})
-        db.commit()
-        db.close()
-        return redirect(url_for('book', book_id=book_id))
-
-
-@app.route("/books")
-def books():
-    # Lists all the books
-
-    booklist = db.execute("SELECT * FROM books").fetchall()
-    db.close()
-    return render_template("books.html", books=booklist)
-
-
 @app.route("/books/<int:book_id>")
 def book(book_id):
         # Detail about book
     book_ = db.execute("SELECT * FROM books WHERE id = :id", {"id": book_id}).fetchone()
     reviews = db.execute("SELECT * FROM reviews WHERE book_id=:id",{"id":book_id}).fetchall()
 
+    kitab_rating = db.execute("SELECT AVG(rating) FROM reviews where id = :id", {"id" : book_id}).fetchall()
+
     db.close()
     if book_ is None:
         return render_template("error.html", message="No such book.")
 
-    return render_template("book.html", book=book_, reviews=reviews)
+# Goodreads API
+    res = requests.get("https://www.goodreads.com/book/review_counts.json", params={"key": "6OOHh35wgg9yplRXmlARw", "isbns": book_.isbn}).json()["books"][0]
+    goodreads_rating = res ["average_rating"]
+
+
+    return render_template("book.html", book=book_, reviews=reviews, kitab_rating = kitab_rating, goodreads_rating=goodreads_rating)
+
 
 @app.route("/search", methods=["POST"])
 def search():
-    if "logged_in" not in session:
-        flash('Unauthorized, Please login', 'danger')
-        return redirect(url_for('user_login'))
-    
-    query = request.form.get("search")
-    option = request.form.get("search_option")
+    try:
+        if "logged_in" not in session:
+            flash('Unauthorized, Please login', 'danger')
+            return redirect(url_for('user_login'))
+        
+        query = request.form.get("search")
+        option = request.form.get("search_option")
 
-    if option == 'year':
-        booklist = db.execute("SELECT * FROM books WHERE year = :query ORDER BY title",
-                                {"query" : query}).fetchall()
-    else:
-        booklist = db.execute("SELECT * FROM books WHERE UPPER(" + option + ") = :query ORDER BY title",
-                                {"query" : query.upper()}).fetchall()
-    
-
-    #for matching search queries of book title, author and isbn
-    if option !='year':
-        booklist = db.execute("SELECT * FROM books WHERE UPPER(" + option +") LIKE :query ORDER BY title",
-                                {"query" : "%" + query.upper() + "%"}).fetchall()
-        if len(booklist) == 0:
-            flash(u"No results found!", "danger")
-            return render_template("books.html")
+        if option == 'year':
+            booklist = db.execute("SELECT * FROM books WHERE year = :query ORDER BY title",
+                                    {"query" : query}).fetchall()
         else:
-            flash(u"No results match your search. Similar results:", "danger")
-            return render_template("books.html", books=booklist)
+            booklist = db.execute("SELECT * FROM books WHERE UPPER(" + option + ") = :query ORDER BY title",
+                                    {"query" : query.upper()}).fetchall()
+        
 
-    if len(booklist) == 0:
-        flash(u"No book matches your search!", "danger")
-        return render_template("books.html", books=booklist)
-    
-    flash(u"Search results for", "success")
-    return render_template("books.html", is_book = True, books = booklist, option = option)
+        #for matching search queries of book title, author and isbn
+        if len(booklist) == 0:
+            booklist = db.execute("SELECT * FROM books WHERE UPPER(" + option +") LIKE :query ORDER BY title",
+                                    {"query" : "%" + query.upper() + "%"}).fetchall()
+            if len(booklist) == 0:
+                flash(u"No results found!", "danger")
+                return render_template("books.html")
+            else:
+                flash(u"No results match your search. Similar results:", "danger")
+                return render_template("books.html", books=booklist)
+
+        if len(booklist) == 0:
+            flash(u"No book matches your search!", "danger")
+            return render_template("books.html", books=booklist)
+        
+        flash(u"Search results for", "success")
+        return render_template("books.html", is_book = True, books = booklist, option = option, info = query)
+
+    except TimeoutError:
+        return render_template("error.html", message="Looks like something went wrong!")
 
 if __name__ == "__main__":
     app.run(debug=True)
