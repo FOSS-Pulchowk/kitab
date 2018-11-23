@@ -1,7 +1,7 @@
 import os
 import requests
 
-from flask import Flask, session, render_template, request, flash, redirect, url_for
+from flask import Flask, session, render_template, request, flash, redirect, url_for, jsonify
 from flask_session import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -55,7 +55,7 @@ def signup():
     used_email = db.execute("SELECT * FROM users WHERE email = :email", {"email": email}).fetchone()
     if used_email is not None:
         flash(u'Email already in use!', 'danger')
-        return redirect(url_for('register'))       
+        return redirect(url_for('register'))
 
     db.execute("INSERT INTO users(first_name, last_name, username, password, email) VALUES (:first_name, :last_name, :username, :password, :email)",
                {"first_name": first_name, "last_name": last_name, "username": username, "password": password, "email": email})
@@ -138,18 +138,28 @@ def book(book_id):
     book_ = db.execute("SELECT * FROM books WHERE id = :id", {"id": book_id}).fetchone()
     reviews = db.execute("SELECT * FROM reviews WHERE book_id=:id",{"id":book_id}).fetchall()
 
-    kitab_rating = db.execute("SELECT AVG(rating) FROM reviews where id = :id", {"id" : book_id}).fetchall()
-
     db.close()
     if book_ is None:
         return render_template("error.html", message="No such book.")
 
+    rating = 0
+    count = 0
+    for review in reviews:
+        rating += review.rating
+        count += 1
+
+    if count:
+        average_rating = rating / count
+    else:
+        rating = 0
+
 # Goodreads API
     res = requests.get("https://www.goodreads.com/book/review_counts.json", params={"key": "6OOHh35wgg9yplRXmlARw", "isbns": book_.isbn}).json()["books"][0]
+
     goodreads_rating = res ["average_rating"]
 
 
-    return render_template("book.html", book=book_, reviews=reviews, kitab_rating = kitab_rating, goodreads_rating=goodreads_rating)
+    return render_template("book.html", book=book_, reviews=reviews,kitab_rating=average_rating, goodreads_rating=goodreads_rating)
 
 
 @app.route("/search", methods=["POST"])
@@ -158,7 +168,7 @@ def search():
         if "logged_in" not in session:
             flash('Unauthorized, Please login', 'danger')
             return redirect(url_for('user_login'))
-        
+
         query = request.form.get("search")
         option = request.form.get("search_option")
 
@@ -168,7 +178,7 @@ def search():
         else:
             booklist = db.execute("SELECT * FROM books WHERE UPPER(" + option + ") = :query ORDER BY title",
                                     {"query" : query.upper()}).fetchall()
-        
+
 
         #for matching search queries of book title, author and isbn
         if len(booklist) == 0:
@@ -184,12 +194,39 @@ def search():
         if len(booklist) == 0:
             flash(u"No book matches your search!", "danger")
             return render_template("books.html", books=booklist)
-        
+
         flash(u"Search results for", "success")
         return render_template("books.html", is_book = True, books = booklist, option = option, info = query)
 
     except TimeoutError:
         return render_template("error.html", message="Looks like something went wrong!")
+
+#api for kitab
+@app.route("/api/<isbn>", methods= ["GET"])
+def book_api(isbn):
+    book = db.execute("SELECT * FROM books WHERE isbn = :isbn", {"isbn" : isbn}).fetchone()
+    if book is None:
+        return render_template("error.html", message =  "Error : Invalid isbn")
+    reviews = db.execute("SELECT * FROM reviews WHERE book_id = :book_id", {"book_id" : book.id}).fetchall()
+
+    rating = 0
+    count = 0
+    for review in reviews:
+        rating += review.rating
+        count += 1
+
+    if count:
+        average_rating = rating / count
+    else:
+        rating = 0
+    return jsonify({
+        "isbn" : book.isbn,
+        "title" : book.title,
+        "author" : book.author,
+        "kitab_rating" : average_rating,
+        "rating_count" : count
+    })
+
 
 if __name__ == "__main__":
     app.run(debug=True)

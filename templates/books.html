@@ -15,7 +15,7 @@
               <option value="year">Year</option>
 
             </select>
-          </div>        
+          </div>
         <input type="text" class="form-control" placeholder="Search book..." name="search">
         <button type="submit" class="btn btn-primary">Search</button>
     </div>
@@ -35,7 +35,7 @@
 
     <div class="list-group list-group-flush m-3">
         {% for book in books %}
-                <a href="{{ url_for('book', book_id=book.id, isbn=book.isbn) }}" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('book', book_id=book.id) }}" class="list-group-item list-group-item-action">
                     <p class="font-weight-bold lead d-inline">{{ book.title }}</p> by <i>{{ book.author }},
                             {{ book.year }}, <u>ISBN: {{ book.isbn }}</u></i>
                 </a>
