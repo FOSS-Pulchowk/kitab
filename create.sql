@@ -12,7 +12,7 @@ CREATE TABLE users (
     last_name VARCHAR NOT NULL,
     username VARCHAR UNIQUE NOT NULL,
     password VARCHAR NOT NULL,
-    email VARCHAR NOT NULL
+    email VARCHAR UNIQUE NOT NULL
 );
 
 
